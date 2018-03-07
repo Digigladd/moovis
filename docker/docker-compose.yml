@@ -1,0 +1,119 @@
+version: '3' 
+services:
+  zookeeper:
+      hostname: zookeeper
+      image: zookeeper
+      ports:
+        - "2181:2181"
+      deploy:
+        resources:
+          limits:
+            memory: 256M
+      networks:
+        - moovis
+
+
+  influxdb:
+    hostname: influxdb
+    image: influxdb:alpine
+    ports:
+      - "8083:8083"
+      - "8086:8086"
+      - "8090:8090"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - moovis
+      
+  grafana:
+    hostname: grafana
+    #build grafana image before selecting this image
+    image: moovis/grafana
+    ports:
+      - "3000:3000"
+    links:
+      - influxdb
+    depends_on:
+      - influxdb
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - reactivetalk  
+
+
+  listener:
+    image: moovis/listener-impl
+    hostname: listener
+    links:
+      - zookeeper
+      - influxdb
+    depends_on:
+      - zookeeper
+      - influxdb
+    ports:
+      - "9000:9000"
+      - "2551"
+      - "7002:7002"
+    env_file:
+      - "env.listener"
+    volumes:
+      - listener:/opt/docker/snapshots
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - moovis
+      
+  epticapuller:
+    image: moovis/epticapuller-impl
+    hostname: epticapuller
+    links:
+      - zookeeper
+      - influxdb
+    depends_on:
+      - zookeeper
+      - influxdb
+    ports:
+      - "9001:9000"
+      - "2551"
+    env_file:
+      - "env.epticapuller"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - moovis
+
+  uccxpuller:
+    image: moovis/uccxpuller-impl
+    hostname: uccxpuller
+    links:
+      - zookeeper
+      - influxdb
+    depends_on:
+      - zookeeper
+      - influxdb
+    ports:
+      - "9002:9000"
+      - "2551"
+    env_file:
+      - "env.uccxpuller"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - moovis
+
+volumes:
+  listener:
+    external: true
+networks:
+    moovis:
+      
